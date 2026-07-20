@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>💰 Money Manager</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #0a0a0a;
+      font-family: 'Courier New', monospace;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    .container {
+      background: #0d0d0d;
+      border: 2px solid #39ff14;
+      border-radius: 20px;
+      padding: 25px;
+      max-width: 400px;
+      width: 100%;
+      box-shadow: 0 0 30px #39ff1444, inset 0 0 30px #39ff1411;
+    }
+    h1 {
+      color: #39ff14;
+      text-align: center;
+      font-size: 22px;
+      letter-spacing: 3px;
+      text-shadow: 0 0 20px #39ff14aa;
+      margin-bottom: 20px;
+    }
+    .balance-box {
+      background: #111;
+      border: 1px solid #39ff14;
+      border-radius: 12px;
+      padding: 15px;
+      text-align: center;
+      margin-bottom: 15px;
+    }
+    .balance-box .label {
+      color: #39ff14aa;
+      font-size: 12px;
+      letter-spacing: 2px;
+    }
+    .balance-box .amount {
+      color: #39ff14;
+      font-size: 32px;
+      font-weight: bold;
+      text-shadow: 0 0 30px #39ff1488;
+    }
+    .input-group {
+      display: flex;
+      gap: 8px;
+      margin: 10px 0;
+    }
+    .input-group input {
+      flex: 1;
+      background: #1a1a1a;
+      border: 1px solid #39ff14;
+      border-radius: 8px;
+      padding: 10px;
+      color: #39ff14;
+      font-size: 16px;
+      outline: none;
+    }
+    .input-group input::placeholder {
+      color: #39ff1455;
+    }
+    .btn-group {
+      display: flex;
+      gap: 10px;
+      margin: 10px 0;
+    }
+    .btn {
+      flex: 1;
+      padding: 12px;
+      border: 1px solid #39ff14;
+      border-radius: 10px;
+      background: transparent;
+      color: #39ff14;
+      font-weight: bold;
+      font-size: 16px;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+    .btn-win {
+      background: #39ff1422;
+      border-color: #39ff14;
+      box-shadow: 0 0 15px #39ff1444;
+    }
+    .btn-win:hover {
+      background: #39ff14;
+      color: #0a0a0a;
+      box-shadow: 0 0 40px #39ff14aa;
+    }
+    .btn-loss {
+      background: #ff003322;
+      border-color: #ff0033;
+      color: #ff0033;
+      box-shadow: 0 0 15px #ff003344;
+    }
+    .btn-loss:hover {
+      background: #ff0033;
+      color: #0a0a0a;
+      box-shadow: 0 0 40px #ff0033aa;
+    }
+    .btn-reset {
+      background: #333;
+      border-color: #666;
+      color: #aaa;
+      font-size: 12px;
+      padding: 8px;
+    }
+    .stats {
+      margin-top: 20px;
+      border-top: 1px solid #39ff1444;
+      padding-top: 15px;
+    }
+    .stats .row {
+      display: flex;
+      justify-content: space-between;
+      color: #39ff14aa;
+      font-size: 14px;
+      padding: 4px 0;
+    }
+    .stats .row .value {
+      color: #39ff14;
+      font-weight: bold;
+    }
+    .stats .row .value.positive { color: #39ff14; }
+    .stats .row .value.negative { color: #ff0033; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h1>⬡ MONEY SHEET ⬡</h1>
+
+  <div class="balance-box">
+    <div class="label">💰 TOTAL BALANCE</div>
+    <div class="amount" id="balanceDisplay">₹0</div>
+  </div>
+
+  <div class="input-group">
+    <input type="number" id="tradeAmount" placeholder="Trade amount" />
+  </div>
+
+  <div class="btn-group">
+    <button class="btn btn-win" onclick="addTrade('win')">✅ WIN</button>
+    <button class="btn btn-loss" onclick="addTrade('loss')">❌ LOSS</button>
+  </div>
+
+  <div style="display:flex; gap:10px; margin-top:6px;">
+    <button class="btn btn-reset" onclick="resetBalance()" style="flex:1;">↺ Reset Day</button>
+    <button class="btn btn-reset" onclick="setCapital()" style="flex:1;">⚙️ Set Capital</button>
+  </div>
+
+  <div class="stats">
+    <div class="row"><span>📊 Today P&L</span><span class="value" id="pnlDisplay">₹0</span></div>
+    <div class="row"><span>🎯 Target (10%)</span><span class="value" id="targetDisplay">₹0</span></div>
+    <div class="row"><span>📈 Remaining</span><span class="value" id="remainingDisplay">₹0</span></div>
+    <div class="row"><span>📅 Win Rate</span><span class="value" id="winRateDisplay">0%</span></div>
+  </div>
+</div>
+
+<script>
+let balance = parseFloat(localStorage.getItem('balance')) || 0;
+let initialCapital = parseFloat(localStorage.getItem('initialCapital')) || 0;
+let trades = JSON.parse(localStorage.getItem('trades')) || [];
+
+function updateUI() {
+  const pnl = trades.reduce((sum, t) => sum + t, 0);
+  document.getElementById('balanceDisplay').textContent = `₹${balance}`;
+  document.getElementById('pnlDisplay').textContent = `₹${pnl}`;
+  document.getElementById('pnlDisplay').className = 'value ' + (pnl >= 0 ? 'positive' : 'negative');
+  
+  const target = initialCapital * 0.1;
+  document.getElementById('targetDisplay').textContent = `₹${target.toFixed(0)}`;
+  const remaining = target - pnl;
+  document.getElementById('remainingDisplay').textContent = `₹${Math.max(0, remaining).toFixed(0)}`;
+  
+  const wins = trades.filter(t => t > 0).length;
+  const total = trades.length;
+  const rate = total ? Math.round((wins / total) * 100) : 0;
+  document.getElementById('winRateDisplay').textContent = rate + '%';
+}
+
+function addTrade(type) {
+  const input = document.getElementById('tradeAmount');
+  const amount = parseFloat(input.value);
+  if (!amount || amount <= 0) return alert('Enter valid amount');
+  const change = type === 'win' ? amount : -amount;
+  balance += change;
+  trades.push(change);
+  localStorage.setItem('balance', balance);
+  localStorage.setItem('trades', JSON.stringify(trades));
+  input.value = '';
+  updateUI();
+}
+
+function resetBalance() {
+  if (confirm('Reset today\'s trades?')) {
+    trades = [];
+    balance = initialCapital;
+    localStorage.setItem('trades', JSON.stringify(trades));
+    localStorage.setItem('balance', balance);
+    updateUI();
+  }
+}
+
+function setCapital() {
+  const cap = prompt('Enter total capital:', initialCapital || '5000');
+  if (cap && !isNaN(cap)) {
+    initialCapital = parseFloat(cap);
+    balance = initialCapital;
+    trades = [];
+    localStorage.setItem('initialCapital', initialCapital);
+    localStorage.setItem('balance', balance);
+    localStorage.setItem('trades', JSON.stringify(trades));
+    updateUI();
+  }
+}
+
+updateUI();
+</script>
+</body>
+</html>
